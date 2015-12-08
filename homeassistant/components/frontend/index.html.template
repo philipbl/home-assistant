@@ -8,6 +8,7 @@
     <link rel='icon' href='/static/favicon.ico'>
     <link rel='apple-touch-icon' sizes='180x180'
           href='/static/favicon-apple-180x180.png'>
+    <link rel="mask-icon" href="/static/pinned-icon.svg" color="#40BCF4">
     <meta name='apple-mobile-web-app-capable' content='yes'>
     <meta name='mobile-web-app-capable' content='yes'>
     <meta name='viewport' content='width=device-width, user-scalable=no'>
