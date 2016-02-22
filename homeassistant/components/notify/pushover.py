@@ -16,21 +16,25 @@ from homeassistant.helpers import validate_config
 REQUIREMENTS = ['python-pushover==0.2']
 _LOGGER = logging.getLogger(__name__)
 
+CONF_USER_KEY = 'user_key'
+CONF_DEVICE = 'device'
+
 
 # pylint: disable=unused-variable
 def get_service(hass, config):
     """ Get the pushover notification service. """
 
     if not validate_config({DOMAIN: config},
-                           {DOMAIN: ['user_key', CONF_API_KEY]},
+                           {DOMAIN: [CONF_USER_KEY, CONF_API_KEY]},
                            _LOGGER):
         return None
 
     from pushover import InitError
 
     try:
-        return PushoverNotificationService(config['user_key'],
-                                           config[CONF_API_KEY])
+        return PushoverNotificationService(config[CONF_USER_KEY],
+                                           config[CONF_API_KEY],
+                                           config.get(CONF_DEVICE))
     except InitError:
         _LOGGER.error(
             "Wrong API key supplied. "
@@ -42,12 +46,12 @@ def get_service(hass, config):
 class PushoverNotificationService(BaseNotificationService):
     """ Implements notification service for Pushover. """
 
-    def __init__(self, user_key, api_token):
+    def __init__(self, user_key, api_token, device):
         from pushover import Client
         self._user_key = user_key
         self._api_token = api_token
         self.pushover = Client(
-            self._user_key, api_token=self._api_token)
+            self._user_key, api_token=self._api_token, device=device)
 
     def send_message(self, message="", **kwargs):
         """ Send a message to a user. """
