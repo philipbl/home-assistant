@@ -85,7 +85,11 @@ class TestInfluxDB(unittest.TestCase):
                 'host': 'host',
                 'username': 'user',
                 'password': 'pass',
-                'blacklist': ['fake.blacklisted']
+                'blacklist': ['fake.blacklisted',
+                              {'regex': 'fake\.regex.*'},
+                              {'regex': 'fake\.test[0-9]+'},
+                              {'regex': 'foobar'},
+                              {'string': 'fake.blacklisted2'}]
             }
         }
         influxdb.setup(self.hass, config)
@@ -104,6 +108,7 @@ class TestInfluxDB(unittest.TestCase):
             attrs = {'unit_of_measurement': 'foobars'}
             state = mock.MagicMock(state=in_,
                                    domain='fake',
+                                   entity_id='entity-id',
                                    object_id='entity',
                                    attributes=attrs)
             event = mock.MagicMock(data={'new_state': state},
@@ -225,6 +230,43 @@ class TestInfluxDB(unittest.TestCase):
             }]
             self.handler_method(event)
             if entity_id == 'ok':
+                mock_client.return_value.write_points.assert_called_once_with(
+                    body)
+            else:
+                self.assertFalse(mock_client.return_value.write_points.called)
+            mock_client.return_value.write_points.reset_mock()
+
+    def test_event_listener_blacklist_regex(self, mock_client):
+        """Test the event listener against a blacklist."""
+        self._setup()
+
+        for domain, entity_id in (('fake', 'ok'),
+                                  ('fake', 'blacklisted2'),
+                                  ('ok', 'regex'),
+                                  ('fake', 'regex'),
+                                  ('fake', 'regex_abcd'),
+                                  ('fake', 'test1'),
+                                  ('fake', 'test')):
+            state = mock.MagicMock(state=1,
+                                   domain=domain,
+                                   entity_id='{}.{}'.format(domain, entity_id),
+                                   object_id=entity_id,
+                                   attributes={})
+            event = mock.MagicMock(data={'new_state': state},
+                                   time_fired=12345)
+            body = [{
+                'measurement': '{}.{}'.format(domain, entity_id),
+                'tags': {
+                    'domain': domain,
+                    'entity_id': entity_id,
+                },
+                'time': 12345,
+                'fields': {
+                    'value': 1,
+                },
+            }]
+            self.handler_method(event)
+            if entity_id in ['ok', 'test'] or domain == 'ok':
                 mock_client.return_value.write_points.assert_called_once_with(
                     body)
             else:
