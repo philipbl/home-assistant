@@ -5,6 +5,7 @@ For more details about this component, please refer to the documentation at
 https://home-assistant.io/components/influxdb/
 """
 import logging
+import re
 
 import homeassistant.util as util
 from homeassistant.const import (EVENT_STATE_CHANGED, STATE_UNAVAILABLE,
@@ -55,7 +56,7 @@ def setup(hass, config):
     ssl = util.convert(conf.get(CONF_SSL), bool, DEFAULT_SSL)
     verify_ssl = util.convert(conf.get(CONF_VERIFY_SSL), bool,
                               DEFAULT_VERIFY_SSL)
-    blacklist = conf.get(CONF_BLACKLIST, [])
+    blacklist = Blacklist(conf.get(CONF_BLACKLIST, []))
 
     try:
         influx = InfluxDBClient(host=host, port=port, username=username,
@@ -107,3 +108,22 @@ def setup(hass, config):
     hass.bus.listen(EVENT_STATE_CHANGED, influx_event_listener)
 
     return True
+
+
+class Blacklist(object):
+    def __init__(self, blacklist):
+        self.blacklist = blacklist
+
+    def __contains__(self, key):
+        for b in self.blacklist:
+            if isinstance(b, str):
+                if b == key:
+                    return True
+            elif isinstance(b, dict) and 'string' in b:
+                if b['string'] == key:
+                    return True
+            elif isinstance(b, dict) and 'regex' in b:
+                if re.match(b['regex'], key) is not None:
+                    return True
+
+        return False
